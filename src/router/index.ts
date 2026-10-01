@@ -10,6 +10,7 @@ const router = createRouter({
     { path: '/explorar', name: 'explorar', component: () => import('../views/ExplorarView.vue') },
     { path: '/salvos', name: 'salvos', component: () => import('../views/SalvosView.vue') },
     { path: '/perfil', name: 'perfil', component: () => import('../views/PerfilView.vue') },
+    { path: '/evento/:id', name: 'evento', component: () => import('../views/EventoView.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

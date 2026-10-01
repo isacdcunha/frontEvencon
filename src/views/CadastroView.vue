@@ -1,453 +1,158 @@
 <script setup lang="ts">
+import { computed, reactive, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
+const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const router = useRouter()
+const auth = useAuthStore()
+
+const form = reactive({ nome: '', email: '', senha: '', confirmarSenha: '' })
+const erros = reactive({ nome: '', email: '', senha: '', confirmarSenha: '', geral: '' })
+const enviando = ref(false)
+
+const senhaValida = computed(
+  () =>
+    form.senha.length >= 8 &&
+    /[a-z]/.test(form.senha) &&
+    /[A-Z]/.test(form.senha) &&
+    /\d/.test(form.senha),
+)
+
+function validar() {
+  erros.nome = form.nome.trim() ? '' : 'Informe seu nome.'
+  erros.email = EMAIL_VALIDO.test(form.email.trim()) ? '' : 'Informe um e-mail válido.'
+  erros.senha = senhaValida.value ? '' : 'A senha não atende aos requisitos.'
+  erros.confirmarSenha = form.confirmarSenha === form.senha ? '' : 'As senhas não coincidem.'
+  erros.geral = ''
+
+  return !erros.nome && !erros.email && !erros.senha && !erros.confirmarSenha
+}
+
+async function criarConta() {
+  if (!validar() || enviando.value) return
+
+  enviando.value = true
+  try {
+    await auth.cadastrar({ nome: form.nome, email: form.email, senha: form.senha })
+    router.push({ name: 'home' })
+  } catch (erro) {
+    erros.geral = erro instanceof Error ? erro.message : 'Não foi possível criar a conta.'
+  } finally {
+    enviando.value = false
+  }
+}
+
+function voltar() {
+  if (window.history.state?.back) {
+    router.back()
+  } else {
+    router.push({ name: 'home' })
+  }
+}
 </script>
 
 <template>
-  <main class="cadastro">
+  <main class="auth">
+    <button type="button" class="botao-voltar" aria-label="Voltar" @click="voltar">
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
 
-    <div class="topo">
-
-      <button class="botao-voltar">
-        ←
-      </button>
-  
-
-    </div>
-
-    <div class="cabecalho">
-
-      <span class="passo">
-        PASSO 1 DE 3
-      </span>
-
-      <h1>Crie sua conta</h1>
-
-
-    </div>
-
-    <form class="formulario">
-
-    
-      <div class="campo">
-
-        <label for="nome">
-          Nome
-        </label>
-
-        <div class="input-container">
-          <span class="icone">☺</span>
-
-          <input
-            id="nome"
-            type="text"
-            placeholder="Qual é seu nome?"
-          />
-        </div>
-
+    <div class="conteudo">
+      <div class="cabecalho">
+        <span class="passo">PASSO 1 DE 3</span>
+        <h1>Crie sua conta</h1>
       </div>
 
-     
-      <div class="campo">
-
-        <label for="email">
-          E-mail
-        </label>
-
-        <div class="input-container">
-          <span class="icone">✉</span>
-
-          <input
-            id="email"
-            type="email"
-            placeholder="Exp: voce@email.com"
-          />
+      <form novalidate @submit.prevent="criarConta">
+        <div class="campo">
+          <label for="nome">Nome</label>
+          <div class="input-container" :class="{ invalido: erros.nome }">
+            <i class="icone fa-regular fa-user"></i>
+            <input
+              id="nome"
+              v-model="form.nome"
+              type="text"
+              autocomplete="name"
+              spellcheck="false"
+              placeholder="Qual é seu nome?"
+            />
+          </div>
+          <small v-if="erros.nome" class="erro">{{ erros.nome }}</small>
         </div>
 
-      </div>
-      
-      <div class="campo">
-
-        <label for="senha">
-          Senha
-        </label>
-
-        <div class="input-container">
-          <span class="icone">⚿</span>
-
-          <input
-            id="senha"
-            type="password"
-            placeholder="Crie uma senha segura!"
-          />
+        <div class="campo">
+          <label for="email">E-mail</label>
+          <div class="input-container" :class="{ invalido: erros.email }">
+            <i class="icone fa-regular fa-envelope"></i>
+            <input
+              id="email"
+              v-model="form.email"
+              type="email"
+              autocomplete="email"
+              placeholder="Exp: voce@email.com"
+            />
+          </div>
+          <small v-if="erros.email" class="erro">{{ erros.email }}</small>
         </div>
 
-  
-        <small>
-          Use no minimo 8 caracteres, incluindo letras maiúsculas, minúsculas e números.
+        <div class="linha">
+          <div class="campo">
+            <label for="senha">Senha</label>
+            <div class="input-container" :class="{ invalido: erros.senha }">
+              <i class="icone fa-solid fa-lock"></i>
+              <input
+                id="senha"
+                v-model="form.senha"
+                type="password"
+                autocomplete="new-password"
+                placeholder="Crie uma senha"
+              />
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="confirmarSenha">Confirmar senha</label>
+            <div class="input-container" :class="{ invalido: erros.confirmarSenha }">
+              <i class="icone fa-solid fa-lock"></i>
+              <input
+                id="confirmarSenha"
+                v-model="form.confirmarSenha"
+                type="password"
+                autocomplete="new-password"
+                placeholder="Repita a senha"
+              />
+            </div>
+            <small v-if="erros.confirmarSenha" class="erro">{{ erros.confirmarSenha }}</small>
+          </div>
+        </div>
+
+        <small class="dica" :class="{ erro: erros.senha }">
+          Use no mínimo 8 caracteres, incluindo letras maiúsculas, minúsculas e números.
         </small>
 
-      </div>
-
-
-  
-
-  
-      <div class="campo">
-
-        <label for="confirmarSenha">
-          Confirmar senha
-        </label>
-
-        <div class="input-container">
-          <span class="icone">⚿</span>
-
-          <input
-            id="confirmarSenha"
-            type="password"
-            placeholder="Repita a senha"
-          />
+        <div class="mensagem">
+          <span class="estrela">✦</span>
+          <h2>Um universo de experiências começa aqui.</h2>
+          <span class="estrela">✦</span>
         </div>
 
-        <div class="mensagem">
-  <span class="estrela">✦</span>
+        <p class="termos">
+          Ao criar sua conta, você concorda com nossos Termos de Uso e Políticas de Privacidade :)
+        </p>
 
-  <h2>Um universo de experiências<br>começa aqui.</h2>
+        <p v-if="erros.geral" class="erro-geral" role="alert">{{ erros.geral }}</p>
 
-  <span class="estrela">✦</span>
-</div>
+        <button type="submit" class="botao-enviar" :disabled="enviando">Criar conta</button>
+      </form>
 
+      <div class="rodape">
+        <span>Já tem conta?</span>
+        <RouterLink to="/login">Entrar</RouterLink>
       </div>
-
-      <p class="termos">
-  Ao criar sua conta, você concorda com nossos Termos de Uso e Políticas de Privacidade :)
-  
-</p>
-    
-      <button
-        type="submit"
-        class="botao-cadastrar"
-      >
-        Criar conta
-      </button>
-
-    </form>
-
-  
-    <div class="login">
-
-      <span>
-        Já tem conta?
-      </span>
-
-      <a href="#">
-        Entrar
-      </a>
-
     </div>
-
   </main>
 </template>
 
-
-<style scoped>
-
-* {
-  box-sizing: border-box;
-}
-
-
-.cadastro {
-  min-height: 100vh;
-  width: 100%;
-  padding: 24px;
-  background: #190b17;
-  color: #ffffff;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-
-
-.topo {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 28px;
-}
-
-
-
-.botao-voltar {
-  width: 58px;
-  height: 58px;
-
-  border-radius: 50%;
-  border: 1px solid #4b3047;
-
-  background: #2c1929;
-  color: #ffffff;
-
-  font-size: 32px;
-  font-weight: 300;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-}
-
-
-
-.cabecalho {
-  width:40% ;
-  margin: 0 auto 28px;
-}
-
-
-.passo {
-  color: #ef68ae;
-
-  font-size: 16px;
-  font-weight: bold;
-
-  letter-spacing: 1.5px;
-}
-
-
-h1 {
-  margin: 6px 0 0;
-
-  font-size: 38px;
-  line-height: 1.1;
-}
-
-
-.cabecalho p {
-  margin: 5px 0 0;
-
-  color: #aa9baa;
-  font-size: 20px;
-}
-
-.termos {
-  color: #9f8b9d;
-  font-size: 14px;
-  line-height: 1.5;
-  text-align: center;
-  margin: 4px 10px 24px;
-}
-
-.formulario {
-  width: 40%;
-  margin: 0 auto;
-}
-
-
-
-.campo {
-  margin-bottom: 24px;
-}
-
-
-.campo label {
-  display: block;
-
-  margin-bottom: 9px;
-
-  color: #d9ccd8;
-
-  font-size: 18px;
-  font-weight: bold;
-}
-
-
-.input-container {
-  height: 76px;
-
-  display: flex;
-  align-items: center;
-
-  border: 2px solid #593b55;
-  border-radius: 22px;
-
-  background: #2b1727;
-
-  padding: 0 20px;
-
-  transition: 0.2s;
-}
-
-
-.input-container:focus-within {
-  border-color: #d946a7;
-}
-
-
-.icone {
-  width: 35px;
-
-  color: #a993a8;
-
-  font-size: 25px;
-}
-
-
-.input-container input {
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-
-  background: transparent !important;
-
-  color: white;
-  font-size: 20px;
-}
-
-
-.input-container {
-  background: #2b1727;
-}
-
-
-.requisitos {
-  display: flex;
-  gap: 5px;
-
-  margin-top: 8px;
-  width: 40%;
-}
-
-
-.requisitos span {
-  height: 5px;
-  flex: 1;
-
-  border-radius: 10px;
-
-  background: #543650;
-}
-
-
-.requisitos span:first-child {
-  background: #ed3c9d;
-}
-
-
-.campo small {
-  display: block;
-
-  margin-top: 8px;
-
-  color: #a993a8;
-
-  font-size: 15px;
-}
-
-
-
-.check {
-  width: 29px;
-  height: 29px;
-
-  flex-shrink: 0;
-
-  border-radius: 7px;
-
-  background: #ef3198;
-
-  position: relative;
-}
-
-
-.check::after {
-  content: "✓";
-
-  position: absolute;
-
-  left: 6px;
-  top: 2px;
-
-  color: white;
-
-  font-size: 20px;
-  font-weight: bold;
-}
-
-
-.botao-cadastrar {
-  width: 100%;
-  height: 78px;
-
-  border: none;
-  border-radius: 40px;
-
-  background: linear-gradient(
-    100deg,
-    #df218d,
-    #b83de0
-  );
-
-  color: white;
-
-  font-size: 22px;
-  font-weight: bold;
-
-  cursor: pointer;
-
-  box-shadow:
-    0 10px 30px rgba(220, 35, 150, 0.25);
-
-  transition: 0.2s;
-}
-
-
-.botao-cadastrar:hover {
-  transform: translateY(-2px);
-
-  box-shadow:
-    0 14px 35px rgba(220, 35, 150, 0.4);
-}
-
-
-.login {
-  text-align: center;
-
-  margin-top: 26px;
-
-  color: #a993a8;
-
-  font-size: 17px;
-}
-
-.mensagem {
-  text-align: center;
-  margin: 25px 0 30px;
-}
-
-.mensagem h2 {
-  color: #e85aa9;
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1.3;
-}
-
-.estrela {
-  color: #b94be2;
-  font-size: 18px;
-}
-
-.login a {
-  color: #ed55a9;
-
-  font-weight: bold;
-
-  text-decoration: none;
-}
-
-
-.login a:hover {
-  text-decoration: underline;
-}
-
-</style>
+<style scoped src="../assets/auth.css"></style>
