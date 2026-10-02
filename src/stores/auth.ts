@@ -15,10 +15,15 @@ export const useAuthStore = defineStore('auth', () => {
     usuario.value = await authService.entrar(email, senha)
   }
 
+  async function atualizarInteresses(interesses: string[]) {
+    if (!usuario.value) return
+    usuario.value = await authService.atualizarInteresses(usuario.value.id, interesses)
+  }
+
   function sair() {
     authService.sair()
     usuario.value = null
   }
 
-  return { usuario, logado, cadastrar, entrar, sair }
+  return { usuario, logado, cadastrar, entrar, atualizarInteresses, sair }
 })

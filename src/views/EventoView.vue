@@ -5,6 +5,7 @@ import EventCard from '@/components/EventCard.vue'
 import LugarCard from '@/components/LugarCard.vue'
 import MapaEvento, { type ResumoRota } from '@/components/MapaEvento.vue'
 import { buscarEvento, buscarSemelhantes } from '@/services/eventos'
+import { useSalvosStore } from '@/stores/salvos'
 import type { Evento, EventoDetalhe } from '@/types/evento'
 
 const route = useRoute()
@@ -13,17 +14,24 @@ const router = useRouter()
 const evento = ref<EventoDetalhe>()
 const semelhantes = ref<Evento[]>([])
 const carregando = ref(true)
-const salvo = ref(false)
+const erro = ref(false)
+const salvos = useSalvosStore()
+const salvo = computed(() => (evento.value ? salvos.tem(evento.value.id) : false))
 const rota = ref<ResumoRota>()
 
 const coresAvatar = ['#ec4899', '#f97316', '#8b5cf6']
 
 async function carregarEvento() {
   carregando.value = true
-  salvo.value = false
   rota.value = undefined
-  evento.value = await buscarEvento(Number(route.params.id))
-  semelhantes.value = evento.value ? await buscarSemelhantes(evento.value) : []
+  erro.value = false
+  try {
+    evento.value = await buscarEvento(Number(route.params.id))
+    semelhantes.value = evento.value ? await buscarSemelhantes(evento.value) : []
+  } catch {
+    evento.value = undefined
+    erro.value = true
+  }
   carregando.value = false
   window.scrollTo({ top: 0 })
 }
@@ -79,6 +87,11 @@ async function compartilhar() {
   <main class="pagina">
     <p v-if="carregando" class="estado">Carregando evento...</p>
 
+    <div v-else-if="erro" class="estado" role="alert">
+      <p>Não foi possível carregar o evento. Verifique se o servidor está no ar.</p>
+      <RouterLink to="/">Voltar para o início</RouterLink>
+    </div>
+
     <div v-else-if="!evento" class="estado">
       <p>Evento não encontrado.</p>
       <RouterLink to="/">Voltar para o início</RouterLink>
@@ -103,7 +116,7 @@ async function compartilhar() {
               class="botao-redondo"
               :class="{ ativo: salvo }"
               :aria-label="salvo ? 'Remover dos salvos' : 'Salvar evento'"
-              @click="salvo = !salvo"
+              @click="salvos.alternar(evento.id)"
             >
               <i :class="salvo ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
             </button>

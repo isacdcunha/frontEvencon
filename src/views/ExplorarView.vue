@@ -1,24 +1,14 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
-
-interface Item {
-  id: number
-  tipo: 'evento' | 'lugar'
-  titulo: string
-  artista?: string
-  local: string
-  categoria: string
-  bairro: string
-  diasAPartirDeHoje?: number 
-  hora?: string 
-  preco: number
-  distancia: number 
-  acessivel: boolean
-  pet: boolean
-  familia: boolean
-}
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import EventCard from '@/components/EventCard.vue'
+import LugarCard from '@/components/LugarCard.vue'
+import { categorias as listaCategorias } from '@/data/categorias'
+import { listarEventos, listarLugares } from '@/services/eventos'
+import type { Evento, Lugar } from '@/types/evento'
 
 type Extra = 'acessivel' | 'pet' | 'familia'
+const campoExtra = { acessivel: 'acessivel', pet: 'petFriendly', familia: 'paraFamilia' } as const
 type TipoFiltro = 'eventos' | 'lugares' | 'ambos'
 type DataFiltro = '' | 'hoje' | 'amanha' | 'fds' | 'escolher'
 type Periodo = 'Manhã' | 'Tarde' | 'Noite'
@@ -26,52 +16,22 @@ type PrecoFiltro = '' | 'gratis' | '50' | '100' | 'custom'
 type Ordem = 'relevancia' | 'proximos' | 'data' | 'preco'
 
 
-const categorias = ['Música', 'Festas', 'Gastronomia', 'Bares', 'Cultura', 'Esportes',
-  'Tecnologia', 'Família', 'Ao ar livre', 'Dança', 'Humor', 'Feiras']
+const categorias = listaCategorias.map((c) => c.nome)
 const bairros = ['Centro', 'América', 'Glória', 'Atiradores', 'Saguaçu', 'Bucarein', 'Boa Vista']
 
-const iconesCategoria: Record<string, string> = {
-  'Música': 'fa-solid fa-music',
-  'Festas': 'fa-solid fa-champagne-glasses',
-  'Gastronomia': 'fa-solid fa-utensils',
-  'Bares': 'fa-brands fa-untappd',
-  'Cultura': 'fa-solid fa-building-columns',
-  'Esportes': 'fa-solid fa-futbol',
-  'Tecnologia': 'fa-solid fa-code',
-  'Família': 'fa-solid fa-people-roof',
-  'Ao ar livre': 'fa-solid fa-tree',
-  'Dança': 'fa-solid fa-person-walking',
-  'Humor': 'fa-solid fa-microphone',
-  'Feiras': 'fa-solid fa-store',
-}
+const iconesCategoria = Object.fromEntries(listaCategorias.map((c) => [c.nome, c.icone]))
 
-const itens: Item[] = [
-  { id: 1, tipo: 'evento', titulo: 'Noite de Samba', artista: 'Grupo Raízes', local: 'Casa de Shows Central', categoria: 'Música', bairro: 'Centro', diasAPartirDeHoje: 0, hora: '20:00', preco: 40, distancia: 2, acessivel: true, pet: false, familia: false },
-  { id: 2, tipo: 'evento', titulo: 'Festival de Jazz', artista: 'Quarteto Blue', local: 'Teatro Juarez Machado', categoria: 'Música', bairro: 'Glória', diasAPartirDeHoje: 1, hora: '19:30', preco: 80, distancia: 5, acessivel: true, pet: false, familia: false },
-  { id: 3, tipo: 'evento', titulo: 'Rock na Praça', artista: 'Banda Vértice', local: 'Praça da Bandeira', categoria: 'Música', bairro: 'América', diasAPartirDeHoje: 3, hora: '18:00', preco: 0, distancia: 3, acessivel: true, pet: true, familia: true },
-  { id: 4, tipo: 'evento', titulo: 'Baile de Máscaras', local: 'Clube Tupy', categoria: 'Festas', bairro: 'Atiradores', diasAPartirDeHoje: 2, hora: '22:00', preco: 120, distancia: 4, acessivel: false, pet: false, familia: false },
-  { id: 5, tipo: 'evento', titulo: 'Festa Julina', local: 'Parque Expoville', categoria: 'Festas', bairro: 'Saguaçu', diasAPartirDeHoje: 5, hora: '16:00', preco: 25, distancia: 8, acessivel: true, pet: true, familia: true },
-  { id: 6, tipo: 'evento', titulo: 'Festival do Chope', local: 'Rua das Palmeiras', categoria: 'Gastronomia', bairro: 'Bucarein', diasAPartirDeHoje: 1, hora: '17:00', preco: 60, distancia: 6, acessivel: true, pet: false, familia: false },
-  { id: 7, tipo: 'evento', titulo: 'Aula de Culinária Alemã', local: 'Escola Gastronômica', categoria: 'Gastronomia', bairro: 'Centro', diasAPartirDeHoje: 4, hora: '10:00', preco: 90, distancia: 2, acessivel: true, pet: false, familia: false },
-  { id: 8, tipo: 'evento', titulo: 'Quiz Night', local: 'Pub do Gaúcho', categoria: 'Bares', bairro: 'América', diasAPartirDeHoje: 0, hora: '21:00', preco: 15, distancia: 3, acessivel: false, pet: false, familia: false },
-  { id: 9, tipo: 'evento', titulo: 'Exposição de Fotografia', local: 'Museu de Arte', categoria: 'Cultura', bairro: 'Centro', diasAPartirDeHoje: 0, hora: '10:00', preco: 0, distancia: 1, acessivel: true, pet: false, familia: true },
-  { id: 10, tipo: 'evento', titulo: 'Peça: O Auto da Compadecida', local: 'Teatro Juarez Machado', categoria: 'Cultura', bairro: 'Glória', diasAPartirDeHoje: 6, hora: '20:00', preco: 50, distancia: 5, acessivel: true, pet: false, familia: true },
-  { id: 11, tipo: 'evento', titulo: 'Corrida de Rua 10K', local: 'Parque da Cidade', categoria: 'Esportes', bairro: 'Boa Vista', diasAPartirDeHoje: 2, hora: '07:00', preco: 70, distancia: 9, acessivel: false, pet: true, familia: false },
-  { id: 12, tipo: 'evento', titulo: 'Campeonato de Vôlei de Praia', local: 'Arena Joinville', categoria: 'Esportes', bairro: 'Saguaçu', diasAPartirDeHoje: 1, hora: '14:00', preco: 0, distancia: 7, acessivel: true, pet: false, familia: true },
-  { id: 13, tipo: 'evento', titulo: 'Meetup Vue.js', local: 'Perini Business Park', categoria: 'Tecnologia', bairro: 'Saguaçu', diasAPartirDeHoje: 3, hora: '19:00', preco: 0, distancia: 10, acessivel: true, pet: false, familia: false },
-  { id: 14, tipo: 'evento', titulo: 'Oficina de Robótica Kids', local: 'Sesc Joinville', categoria: 'Tecnologia', bairro: 'Centro', diasAPartirDeHoje: 2, hora: '09:00', preco: 30, distancia: 2, acessivel: true, pet: false, familia: true },
-  { id: 15, tipo: 'evento', titulo: 'Tarde de Contação de Histórias', local: 'Biblioteca Municipal', categoria: 'Família', bairro: 'Centro', diasAPartirDeHoje: 1, hora: '15:00', preco: 0, distancia: 1, acessivel: true, pet: false, familia: true },
-  { id: 16, tipo: 'evento', titulo: 'Trilha no Morro do Boa Vista', local: 'Morro do Boa Vista', categoria: 'Ao ar livre', bairro: 'Boa Vista', diasAPartirDeHoje: 2, hora: '08:00', preco: 0, distancia: 6, acessivel: false, pet: true, familia: true },
-  { id: 17, tipo: 'evento', titulo: 'Aulão de Forró', local: 'Estúdio Ritmo', categoria: 'Dança', bairro: 'América', diasAPartirDeHoje: 4, hora: '19:00', preco: 35, distancia: 3, acessivel: true, pet: false, familia: false },
-  { id: 18, tipo: 'evento', titulo: 'Stand-up Comedy', artista: 'Rafa Lima', local: 'Teatro Café', categoria: 'Humor', bairro: 'Atiradores', diasAPartirDeHoje: 0, hora: '21:30', preco: 60, distancia: 4, acessivel: true, pet: false, familia: false },
-  { id: 19, tipo: 'evento', titulo: 'Feira de Artesanato', local: 'Praça Nereu Ramos', categoria: 'Feiras', bairro: 'Centro', diasAPartirDeHoje: 2, hora: '09:00', preco: 0, distancia: 1, acessivel: true, pet: true, familia: true },
-  { id: 20, tipo: 'evento', titulo: 'Feira Orgânica', local: 'Rua Dona Francisca', categoria: 'Feiras', bairro: 'Bucarein', diasAPartirDeHoje: 3, hora: '07:30', preco: 0, distancia: 5, acessivel: true, pet: true, familia: true },
+const eventos = ref<Evento[]>([])
+const lugares = ref<Lugar[]>([])
+const erro = ref(false)
 
-  { id: 21, tipo: 'lugar', titulo: 'Museu Nacional da Imigração', local: 'Museu Nacional da Imigração', categoria: 'Cultura', bairro: 'Glória', preco: 15, distancia: 4, acessivel: true, pet: false, familia: true },
-  { id: 22, tipo: 'lugar', titulo: 'Bar do Alemão', local: 'Bar do Alemão', categoria: 'Bares', bairro: 'América', preco: 40, distancia: 3, acessivel: true, pet: true, familia: false },
-  { id: 23, tipo: 'lugar', titulo: 'Parque Zoobotânico', local: 'Parque Zoobotânico', categoria: 'Ao ar livre', bairro: 'Boa Vista', preco: 0, distancia: 8, acessivel: true, pet: true, familia: true },
-  { id: 24, tipo: 'lugar', titulo: 'Restaurante Colonial', local: 'Restaurante Colonial', categoria: 'Gastronomia', bairro: 'Centro', preco: 70, distancia: 2, acessivel: true, pet: false, familia: true },
-]
+onMounted(async () => {
+  try {
+    ;[eventos.value, lugares.value] = await Promise.all([listarEventos(), listarLugares()])
+  } catch {
+    erro.value = true
+  }
+})
 
 const PRECO_MAX = 150 
 const DIST_MAX = 20 
@@ -149,17 +109,10 @@ function isoLocal(d: Date) {
   return `${d.getFullYear()}-${mes}-${dia}`
 }
 
-function periodoDoDia(hora: string): Periodo {
-  const h = Number(hora.split(':')[0])
+function periodoDoDia(h: number): Periodo {
   if (h < 12) return 'Manhã'
   if (h < 18) return 'Tarde'
   return 'Noite'
-}
-
-function formatarData(dias: number) {
-  if (dias === 0) return 'Hoje'
-  if (dias === 1) return 'Amanhã'
-  return dataDoItem(dias).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })
 }
 
 function formatarPreco(p: number) {
@@ -211,12 +164,12 @@ const rotuloData = computed(() => {
   if (filtros.data === 'escolher') {
     return filtros.dataEscolhida ? filtros.dataEscolhida.split('-').reverse().join('/') : 'Escolher data'
   }
-  return ({ hoje: 'Hoje', amanha: 'Amanhã', fds: 'Fim de semana', '': '' } as Record<string, string>)[filtros.data]
+  return ({ hoje: 'Hoje', amanha: 'Amanhã', fds: 'Fim de semana', '': '' } as Record<string, string>)[filtros.data] ?? ''
 })
 
 const rotuloPreco = computed(() => {
   if (filtros.preco === 'custom') return `Até R$ ${filtros.precoMax}`
-  return ({ gratis: 'Grátis', '50': 'Até R$ 50', '100': 'Até R$ 100', '': '' } as Record<string, string>)[filtros.preco]
+  return ({ gratis: 'Grátis', '50': 'Até R$ 50', '100': 'Até R$ 100', '': '' } as Record<string, string>)[filtros.preco] ?? ''
 })
 
 interface ChipAtivo {
@@ -257,58 +210,62 @@ function removerChip(c: ChipAtivo) {
 
 const termo = computed(() => normalizar(busca.value))
 
-function passaComum(item: Item, f: Filtros, t: string) {
-  if (t) {
-    const alvo = normalizar(
-      [item.titulo, item.artista, item.local, item.categoria, item.bairro].filter(Boolean).join(' ')
-    )
-    if (!alvo.includes(t)) return false
-  }
-  if (f.preco === 'gratis' && item.preco !== 0) return false
-  if (f.preco === '50' && item.preco > 50) return false
-  if (f.preco === '100' && item.preco > 100) return false
-  if (f.preco === 'custom' && item.preco > f.precoMax) return false
-  if (f.distancia < DIST_MAX && item.distancia > f.distancia) return false
-  if (f.categorias.length && !f.categorias.includes(item.categoria)) return false
+function contemTermo(textos: string[], t: string) {
+  return !t || normalizar(textos.join(' ')).includes(t)
+}
+
+function passaBairroEExtras(item: Evento | Lugar, f: Filtros) {
   if (f.bairros.length && !f.bairros.includes(item.bairro)) return false
-  for (const e of f.extras) if (!item[e]) return false
+  return f.extras.every((e) => item[campoExtra[e]])
+}
+
+function passaDataHora(evento: Evento, f: Filtros) {
+  const inicio = new Date(evento.inicio)
+  if (f.data === 'hoje' && isoLocal(inicio) !== isoLocal(dataDoItem(0))) return false
+  if (f.data === 'amanha' && isoLocal(inicio) !== isoLocal(dataDoItem(1))) return false
+  if (f.data === 'fds' && ![0, 6].includes(inicio.getDay())) return false
+  if (f.data === 'escolher' && f.dataEscolhida && isoLocal(inicio) !== f.dataEscolhida) return false
+  if (f.periodos.length && !f.periodos.includes(periodoDoDia(inicio.getHours()))) return false
   return true
 }
 
-function passaDataHora(item: Item, f: Filtros) {
-  const dias = item.diasAPartirDeHoje ?? 0
-  const d = dataDoItem(dias)
-  if (f.data === 'hoje' && dias !== 0) return false
-  if (f.data === 'amanha' && dias !== 1) return false
-  if (f.data === 'fds' && ![0, 6].includes(d.getDay())) return false
-  if (f.data === 'escolher' && f.dataEscolhida && isoLocal(d) !== f.dataEscolhida) return false
-  if (f.periodos.length && !f.periodos.includes(periodoDoDia(item.hora ?? '00:00'))) return false
-  return true
+function passaEvento(evento: Evento, f: Filtros, t: string) {
+  if (!contemTermo([evento.titulo, evento.local, evento.bairro, ...evento.categorias], t)) return false
+  if (f.preco === 'gratis' && evento.preco !== 0) return false
+  if (f.preco === '50' && evento.preco > 50) return false
+  if (f.preco === '100' && evento.preco > 100) return false
+  if (f.preco === 'custom' && evento.preco > f.precoMax) return false
+  if (f.distancia < DIST_MAX && evento.distanciaKm > f.distancia) return false
+  if (f.categorias.length && !evento.categorias.some((c) => f.categorias.includes(c))) return false
+  return passaBairroEExtras(evento, f) && passaDataHora(evento, f)
 }
 
-function ordenar(lista: Item[]) {
+// Lugares não têm preço em reais, distância nem data: esses filtros só valem para eventos.
+function passaLugar(lugar: Lugar, f: Filtros, t: string) {
+  if (!contemTermo([lugar.nome, lugar.tipo, lugar.categoria, lugar.bairro], t)) return false
+  if (f.categorias.length && !f.categorias.includes(lugar.categoria)) return false
+  return passaBairroEExtras(lugar, f)
+}
+
+function ordenar(lista: Evento[]) {
   const l = [...lista]
-  if (ordem.value === 'proximos') l.sort((a, b) => a.distancia - b.distancia)
-  else if (ordem.value === 'data') l.sort((a, b) => (a.diasAPartirDeHoje ?? 99) - (b.diasAPartirDeHoje ?? 99))
+  if (ordem.value === 'proximos') l.sort((a, b) => a.distanciaKm - b.distanciaKm)
+  else if (ordem.value === 'data') l.sort((a, b) => a.inicio.localeCompare(b.inicio))
   else if (ordem.value === 'preco') l.sort((a, b) => a.preco - b.preco)
   return l
 }
 
 function buscar(f: Filtros) {
   const t = termo.value
-  const eventos = f.tipo === 'lugares'
-    ? []
-    : itens.filter((i) => i.tipo === 'evento' && passaComum(i, f, t) && passaDataHora(i, f))
-  const lugares = f.tipo === 'eventos'
-    ? []
-    : itens.filter((i) => i.tipo === 'lugar' && passaComum(i, f, t))
-  return { eventos: ordenar(eventos), lugares: ordenar(lugares) }
+  return {
+    eventos: f.tipo === 'lugares' ? [] : ordenar(eventos.value.filter((e) => passaEvento(e, f, t))),
+    lugares: f.tipo === 'eventos' ? [] : lugares.value.filter((l) => passaLugar(l, f, t)),
+  }
 }
 
 const resultados = computed(() => buscar(filtros))
 const semFiltros = computed(() => buscar(filtrosVazios())) 
 
-const listaAtual = computed(() => (aba.value === 'eventos' ? resultados.value.eventos : resultados.value.lugares))
 const total = computed(() => resultados.value.eventos.length + resultados.value.lugares.length)
 const totalSemFiltros = computed(() =>
   aba.value === 'eventos' ? semFiltros.value.eventos.length : semFiltros.value.lugares.length
@@ -326,10 +283,8 @@ const sugestoes = computed(() => {
   const q = termo.value
   if (q.length < 2) return null
   const cats = categorias.filter((c) => normalizar(c).includes(q)).slice(0, 2)
-  const evs = itens
-    .filter((i) => i.tipo === 'evento' && normalizar(`${i.titulo} ${i.artista ?? ''} ${i.local}`).includes(q))
-    .slice(0, 4)
-  const pls = itens.filter((i) => i.tipo === 'lugar' && normalizar(i.titulo).includes(q)).slice(0, 2)
+  const evs = eventos.value.filter((e) => normalizar(`${e.titulo} ${e.local}`).includes(q)).slice(0, 4)
+  const pls = lugares.value.filter((l) => normalizar(l.nome).includes(q)).slice(0, 2)
   return { cats, evs, pls, vazio: !cats.length && !evs.length && !pls.length }
 })
 
@@ -351,8 +306,8 @@ function aoSairDoCampo() {
   }, 200)
 }
 
-function escolherSugestao(item: Item) {
-  busca.value = item.titulo
+function escolherSugestao(texto: string) {
+  busca.value = texto
   enviarBusca()
 }
 
@@ -446,8 +401,8 @@ function limparCampo() {
 const rotuloCategoria = computed(() => {
   const mapa: Record<string, string> = {}
   for (const c of categorias) {
-    const n = itens.filter((i) => i.tipo === 'evento' && i.categoria === c).length
-    const m = itens.filter((i) => i.tipo === 'lugar' && i.categoria === c).length
+    const n = eventos.value.filter((e) => e.categorias.includes(c)).length
+    const m = lugares.value.filter((l) => l.categoria === c).length
     mapa[c] = m > n ? `${m} ${m === 1 ? 'lugar' : 'lugares'}` : `${n} ${n === 1 ? 'evento' : 'eventos'}`
   }
   return mapa
@@ -469,6 +424,33 @@ function voltarInicio() {
   ordem.value = 'relevancia'
   Object.assign(filtros, filtrosVazios())
 }
+
+// A busca do header e os atalhos da tela inicial chegam pela URL:
+// /explorar?q=samba, ?data=hoje, ?preco=gratis, ?categoria=Música, ?tipo=lugares, ?ordem=proximos
+const route = useRoute()
+
+function aplicarQuery() {
+  const { q, data, preco, categoria, tipo, ordem: ordemPedida } = route.query
+  const temFiltro = [data, preco, categoria, tipo, ordemPedida].some((v) => typeof v === 'string')
+
+  if (temFiltro) {
+    clearTimeout(timerRecente)
+    Object.assign(filtros, filtrosVazios())
+    if (data === 'hoje' || data === 'amanha' || data === 'fds') filtros.data = data
+    if (preco === 'gratis') filtros.preco = 'gratis'
+    if (typeof categoria === 'string' && categorias.includes(categoria)) filtros.categorias = [categoria]
+    if (tipo === 'eventos' || tipo === 'lugares') filtros.tipo = tipo
+    // se não houver eventos no resultado, o watch de resultados troca para a aba de lugares
+    aba.value = tipo === 'lugares' ? 'lugares' : 'eventos'
+    ordem.value = ordensOpcoes.find((o) => o.id === ordemPedida)?.id ?? 'relevancia'
+  }
+
+  busca.value = typeof q === 'string' ? q : ''
+  enviado.value = temFiltro || busca.value.trim() !== ''
+  digitando.value = false
+}
+
+watch(() => route.query, aplicarQuery, { immediate: true })
 </script>
 <template>
   <main>
@@ -624,6 +606,11 @@ function voltarInicio() {
     </div>
 
     <div class="categorias-container">
+      <p v-if="erro" class="erro-carga" role="alert">
+        Não foi possível carregar os eventos e lugares. Verifique se o servidor está no ar e
+        recarregue a página.
+      </p>
+
       <template v-if="!(digitando && sugestoes)">
         <div class="menu-recente">
           <h2 class="busca-recente">Busca Recente</h2>
@@ -650,18 +637,18 @@ function voltarInicio() {
 
         <button
           v-for="i in sugestoes.evs" :key="i.id" type="button" class="sugestao"
-          @mousedown.prevent @click="escolherSugestao(i)"
+          @mousedown.prevent @click="escolherSugestao(i.titulo)"
         >
           <i class="fa-solid fa-calendar"></i><span>{{ i.titulo }}</span>
-          <small>Evento · {{ formatarData(i.diasAPartirDeHoje ?? 0) }} · {{ formatarPreco(i.preco) }}</small>
+          <small>Evento · {{ i.data }} · {{ formatarPreco(i.preco) }}</small>
         </button>
 
         <button
           v-for="i in sugestoes.pls" :key="i.id" type="button" class="sugestao"
-          @mousedown.prevent @click="escolherSugestao(i)"
+          @mousedown.prevent @click="escolherSugestao(i.nome)"
         >
-          <i class="fa-solid fa-location-dot"></i><span>{{ i.titulo }}</span>
-          <small>Lugar · {{ i.distancia }} km</small>
+          <i class="fa-solid fa-location-dot"></i><span>{{ i.nome }}</span>
+          <small>Lugar · {{ i.tipo }}</small>
         </button>
 
         <p v-if="sugestoes.vazio" class="sem-recentes">Nada com “{{ busca }}” ainda.</p>
@@ -699,25 +686,12 @@ function voltarInicio() {
           </button>
         </div>
 
-        <div v-if="listaAtual.length" class="resultados-grid">
-          <article v-for="item in listaAtual" :key="item.id" class="resultado-card">
-            <div class="resultado-topo">
-              <span class="selo">{{ item.tipo === 'evento' ? 'Evento' : 'Lugar' }}</span>
-              <span class="preco">{{ formatarPreco(item.preco) }}</span>
-            </div>
-            <h3 class="resultado-titulo">{{ item.titulo }}</h3>
-            <p v-if="item.artista" class="resultado-artista">{{ item.artista }}</p>
-            <p class="resultado-info">
-              <i class="fa-solid fa-location-dot"></i> {{ item.local }} · {{ item.bairro }}
-            </p>
-            <p v-if="item.tipo === 'evento'" class="resultado-info">
-              <i class="fa-solid fa-clock"></i> {{ formatarData(item.diasAPartirDeHoje ?? 0) }} · {{ item.hora }}
-            </p>
-            <div class="resultado-rodape">
-              <span class="tag">{{ item.categoria }}</span>
-              <span class="distancia">{{ item.distancia }} km</span>
-            </div>
-          </article>
+        <div v-if="aba === 'eventos' && resultados.eventos.length" class="resultados-grid">
+          <EventCard v-for="evento in resultados.eventos" :key="evento.id" :evento="evento" />
+        </div>
+
+        <div v-else-if="aba === 'lugares' && resultados.lugares.length" class="resultados-grid">
+          <LugarCard v-for="lugar in resultados.lugares" :key="lugar.id" :lugar="lugar" />
         </div>
 
         <div v-else class="vazio">
@@ -737,7 +711,7 @@ function voltarInicio() {
       <template v-else>
         <h1 class="categoria">Categorias</h1>
         <div class="cards-container">
-          <div v-for="c in categorias" :key="c" class="card" @click="aplicarCategoria(c)">
+          <div v-for="c in categorias" :key="c" class="card-categoria" @click="aplicarCategoria(c)">
             <div class="icone-card"><i :class="iconesCategoria[c]"></i></div>
             <h1 class="titulo-card">{{ c }}</h1>
             <p class="quant-eventos-card">{{ rotuloCategoria[c] }}</p>
@@ -1016,7 +990,7 @@ function voltarInicio() {
   margin: 0px 0px 50px 0px;
 }
 
-.card {
+.card-categoria {
   position: relative;
   overflow: hidden;
   height: 120px;
@@ -1031,12 +1005,12 @@ function voltarInicio() {
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 
-.card:hover {
+.card-categoria:hover {
   transform: translateY(-3px);
   filter: brightness(1.08);
 }
 
-.card::after {
+.card-categoria::after {
   content: '';
   position: absolute;
   top: -30px;
@@ -1073,27 +1047,27 @@ function voltarInicio() {
   opacity: 0.9;
 }
 
-.card:nth-child(1),
-.card:nth-child(5),
-.card:nth-child(9) {
+.card-categoria:nth-child(1),
+.card-categoria:nth-child(5),
+.card-categoria:nth-child(9) {
   --gradiente: linear-gradient(135deg, #f04fb0 0%, #7b4aa8 100%);
 }
 
-.card:nth-child(2),
-.card:nth-child(6),
-.card:nth-child(10) {
+.card-categoria:nth-child(2),
+.card-categoria:nth-child(6),
+.card-categoria:nth-child(10) {
   --gradiente: linear-gradient(135deg, #ff9a56 0%, #c2306f 100%);
 }
 
-.card:nth-child(3),
-.card:nth-child(7),
-.card:nth-child(11) {
+.card-categoria:nth-child(3),
+.card-categoria:nth-child(7),
+.card-categoria:nth-child(11) {
   --gradiente: linear-gradient(135deg, #e8479f 0%, #7a1f55 100%);
 }
 
-.card:nth-child(4),
-.card:nth-child(8),
-.card:nth-child(12) {
+.card-categoria:nth-child(4),
+.card-categoria:nth-child(8),
+.card-categoria:nth-child(12) {
   --gradiente: linear-gradient(135deg, #a259f0 0%, #4a3a87 100%);
 }
 
@@ -1345,75 +1319,13 @@ function voltarInicio() {
   margin-bottom: 50px;
 }
 
-.resultado-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
-  border-radius: 20px;
-  background-color: #412233;
+.erro-carga {
+  margin: 20px 0 0;
+  padding: 14px 18px;
+  border: 1px dashed #70475e;
+  border-radius: 16px;
   color: #fff;
-  transition: transform 0.2s ease;
-}
-
-.resultado-card:hover {
-  transform: translateY(-3px);
-}
-
-.resultado-topo,
-.resultado-rodape {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.selo {
-  padding: 2px 10px;
-  border-radius: 999px;
-  background: #a259f0;
-  font-size: 0.65rem;
-  font-weight: bold;
-}
-
-.preco {
-  color: #ff6fae;
   font-size: 0.85rem;
-  font-weight: bold;
-}
-
-.resultado-titulo {
-  margin: 4px 0 0;
-  font-size: 1rem;
-}
-
-.resultado-artista {
-  margin: 0;
-  color: #DD82AD;
-  font-size: 0.8rem;
-}
-
-.resultado-info {
-  margin: 0;
-  color: #d6d0d3;
-  font-size: 0.78rem;
-}
-
-.resultado-rodape {
-  margin-top: auto;
-  padding-top: 8px;
-}
-
-.tag {
-  padding: 3px 10px;
-  border: 1px solid #70475e;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.distancia {
-  color: #adacad;
-  font-size: 0.75rem;
 }
 
 .vazio {

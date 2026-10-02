@@ -11,6 +11,10 @@ export interface Evento {
   distanciaKm: number
   icone: string
   destaque?: string
+  bairro: string
+  acessivel: boolean
+  petFriendly: boolean
+  paraFamilia: boolean
 }
 
 export interface InfoEvento {
@@ -19,16 +23,25 @@ export interface InfoEvento {
   descricao: string
 }
 
-export interface LugarProximo {
+export interface Lugar {
   id: number
   nome: string
   tipo: string
   faixaPreco: number
-  distanciaKm: number
   aberto: boolean
   horario: string
   icone: string
   gradiente: string
+  categoria: string
+  bairro: string
+  acessivel: boolean
+  petFriendly: boolean
+  paraFamilia: boolean
+}
+
+/** Lugar perto de um evento, com a distância entre os dois */
+export interface LugarProximo extends Lugar {
+  distanciaKm: number
 }
 
 export interface EventoDetalhe extends Evento {

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useSalvosStore } from '@/stores/salvos'
 import type { Evento } from '@/types/evento'
 
 const props = defineProps<{
   evento: Evento
 }>()
 
-const salvo = defineModel<boolean>('salvo', { default: false })
+const salvos = useSalvosStore()
+const salvo = computed(() => salvos.tem(props.evento.id))
 
 const gratis = computed(() => props.evento.preco === 0)
 
@@ -21,9 +23,7 @@ const precoFormatado = computed(() =>
       }),
 )
 
-const distanciaFormatada = computed(
-  () => `${props.evento.distanciaKm.toLocaleString('pt-BR')} km`,
-)
+const distanciaFormatada = computed(() => `${props.evento.distanciaKm.toLocaleString('pt-BR')} km`)
 </script>
 
 <template>
@@ -38,7 +38,7 @@ const distanciaFormatada = computed(
         class="botao-salvar"
         :class="{ ativo: salvo }"
         :aria-label="salvo ? 'Remover dos salvos' : 'Salvar evento'"
-        @click.prevent.stop="salvo = !salvo"
+        @click.prevent.stop="salvos.alternar(evento.id)"
       >
         <i :class="salvo ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
       </button>
