@@ -1128,6 +1128,14 @@ function voltarInicio() {
   font-weight: bold;
   margin-left: 730px;
   margin-top: 20px;
+  cursor: pointer;
+    transition: .5s ease;
+
+}
+
+.menu-recente p:hover{
+  color: #c2306f;
+  transition: .5s ease;
 }
 
 .menu-recente h2 {
@@ -1299,6 +1307,17 @@ function voltarInicio() {
   font-weight: 600;
   color-scheme: dark;
   cursor: pointer;
+}
+
+.ordenar option {
+  background-color: #412233;
+  color: #fff;
+
+}
+
+.ordenar option:checked {
+  background-color: #70475e;
+  color: #fff;
 }
 
 .chips-ativos {
