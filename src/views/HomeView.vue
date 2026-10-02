@@ -5,30 +5,39 @@ import EventCard from '@/components/EventCard.vue'
 import LugarCard from '@/components/LugarCard.vue'
 import { listarEventos, listarLugares } from '@/services/eventos'
 import { useAuthStore } from '@/stores/auth'
-import type { Evento, LugarProximo } from '@/types/evento'
+import type { Evento, Lugar } from '@/types/evento'
 
 const auth = useAuthStore()
 
 const eventos = ref<Evento[]>([])
-const lugares = ref<LugarProximo[]>([])
-const carregando = ref(true)
+const lugares = ref<Lugar[]>([])
+const pronto = ref(false)
+const erro = ref(false)
 
 onMounted(async () => {
-  ;[eventos.value, lugares.value] = await Promise.all([listarEventos(), listarLugares()])
-  carregando.value = false
+  try {
+    ;[eventos.value, lugares.value] = await Promise.all([listarEventos(), listarLugares()])
+    pronto.value = true
+  } catch {
+    erro.value = true
+  }
 })
 
 const agora = new Date()
 
 const atalhos = [
-  { rotulo: 'Para você', icone: 'fa-solid fa-wand-magic-sparkles' },
-  { rotulo: 'Hoje' },
-  { rotulo: 'Este fim de semana' },
-  { rotulo: 'Grátis' },
-  { rotulo: 'Perto de mim', icone: 'fa-solid fa-location-crosshairs' },
-  { rotulo: 'Música', icone: 'fa-solid fa-music', busca: 'Música' },
-  { rotulo: 'Bares', icone: 'fa-solid fa-beer-mug-empty', busca: 'Bares' },
-  { rotulo: 'Ao ar livre', icone: 'fa-solid fa-tree', busca: 'Ao ar livre' },
+  { rotulo: 'Para você', icone: 'fa-solid fa-wand-magic-sparkles', filtro: {} },
+  { rotulo: 'Hoje', filtro: { data: 'hoje' } },
+  { rotulo: 'Este fim de semana', filtro: { data: 'fds' } },
+  { rotulo: 'Grátis', filtro: { preco: 'gratis' } },
+  {
+    rotulo: 'Perto de mim',
+    icone: 'fa-solid fa-location-crosshairs',
+    filtro: { ordem: 'proximos' },
+  },
+  { rotulo: 'Música', icone: 'fa-solid fa-music', filtro: { categoria: 'Música' } },
+  { rotulo: 'Bares', icone: 'fa-solid fa-beer-mug-empty', filtro: { categoria: 'Bares' } },
+  { rotulo: 'Ao ar livre', icone: 'fa-solid fa-tree', filtro: { categoria: 'Ao ar livre' } },
 ]
 
 function inicioDoDia(data: Date) {
@@ -98,6 +107,11 @@ const rotuloFimDeSemana = computed(() => {
         <h1>{{ saudacao }}</h1>
       </header>
 
+      <p v-if="erro" class="vazio" role="alert">
+        Não foi possível carregar os eventos. Verifique se o servidor está no ar e recarregue a
+        página.
+      </p>
+
       <RouterLink
         v-if="destaque"
         :to="{ name: 'evento', params: { id: destaque.id } }"
@@ -128,7 +142,7 @@ const rotuloFimDeSemana = computed(() => {
         <RouterLink
           v-for="(atalho, i) in atalhos"
           :key="atalho.rotulo"
-          :to="{ name: 'explorar', query: atalho.busca ? { q: atalho.busca } : {} }"
+          :to="{ name: 'explorar', query: atalho.filtro }"
           class="atalho"
           :class="{ ativo: i === 0 }"
         >
@@ -148,7 +162,7 @@ const rotuloFimDeSemana = computed(() => {
         <div v-if="paraVoce.length" class="grade grade-4">
           <EventCard v-for="evento in paraVoce" :key="evento.id" :evento="evento" />
         </div>
-        <p v-else-if="!carregando" class="vazio">Ainda não há eventos por aqui.</p>
+        <p v-else-if="pronto" class="vazio">Ainda não há eventos por aqui.</p>
       </section>
 
       <div class="dividido">
@@ -158,12 +172,12 @@ const rotuloFimDeSemana = computed(() => {
               <h2>Acontecendo hoje</h2>
               <p class="capitalizado">{{ formatarDia(agora) }}</p>
             </div>
-            <RouterLink to="/explorar">Ver tudo</RouterLink>
+            <RouterLink :to="{ name: 'explorar', query: { data: 'hoje' } }">Ver tudo</RouterLink>
           </div>
           <div v-if="hoje.length" class="grade grade-2">
             <EventCard v-for="evento in hoje.slice(0, 2)" :key="evento.id" :evento="evento" />
           </div>
-          <p v-else-if="!carregando" class="vazio">Nenhum evento marcado para hoje.</p>
+          <p v-else-if="pronto" class="vazio">Nenhum evento marcado para hoje.</p>
         </section>
 
         <section>
@@ -172,17 +186,12 @@ const rotuloFimDeSemana = computed(() => {
               <h2>Onde ir: bares e restaurantes</h2>
               <p>Abertos agora</p>
             </div>
-            <RouterLink to="/explorar">Ver tudo</RouterLink>
+            <RouterLink :to="{ name: 'explorar', query: { tipo: 'lugares' } }">Ver tudo</RouterLink>
           </div>
           <div v-if="lugaresAbertos.length" class="grade grade-2">
-            <LugarCard
-              v-for="lugar in lugaresAbertos"
-              :key="lugar.id"
-              :lugar="lugar"
-              sem-distancia
-            />
+            <LugarCard v-for="lugar in lugaresAbertos" :key="lugar.id" :lugar="lugar" />
           </div>
-          <p v-else-if="!carregando" class="vazio">Nenhum lugar aberto agora.</p>
+          <p v-else-if="pronto" class="vazio">Nenhum lugar aberto agora.</p>
         </section>
       </div>
 
@@ -206,12 +215,14 @@ const rotuloFimDeSemana = computed(() => {
             <h2>Grátis este fim de semana</h2>
             <p>{{ rotuloFimDeSemana }}</p>
           </div>
-          <RouterLink to="/explorar">Ver tudo</RouterLink>
+          <RouterLink :to="{ name: 'explorar', query: { data: 'fds', preco: 'gratis' } }">
+            Ver tudo
+          </RouterLink>
         </div>
         <div v-if="gratisNoFimDeSemana.length" class="grade grade-4">
           <EventCard v-for="evento in gratisNoFimDeSemana" :key="evento.id" :evento="evento" />
         </div>
-        <p v-else-if="!carregando" class="vazio">Nenhum evento grátis neste fim de semana.</p>
+        <p v-else-if="pronto" class="vazio">Nenhum evento grátis neste fim de semana.</p>
       </section>
     </div>
   </main>

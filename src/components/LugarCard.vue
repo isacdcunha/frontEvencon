@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { LugarProximo } from '@/types/evento'
+import type { Lugar, LugarProximo } from '@/types/evento'
 
 const props = defineProps<{
-  lugar: LugarProximo
-  semDistancia?: boolean
+  lugar: Lugar | LugarProximo
 }>()
 
-const distanciaFormatada = computed(
-  () => `${props.lugar.distanciaKm.toLocaleString('pt-BR')} km do evento`,
+const distanciaFormatada = computed(() =>
+  'distanciaKm' in props.lugar
+    ? `${props.lugar.distanciaKm.toLocaleString('pt-BR')} km do evento`
+    : '',
 )
 </script>
 
@@ -23,7 +24,7 @@ const distanciaFormatada = computed(
       <p class="tipo">{{ lugar.tipo }}</p>
       <p class="preco">
         <span v-for="n in 4" :key="n" :class="{ ativo: n <= lugar.faixaPreco }">$</span>
-        <template v-if="!semDistancia">· {{ distanciaFormatada }}</template>
+        <template v-if="distanciaFormatada">· {{ distanciaFormatada }}</template>
       </p>
       <p class="status" :class="{ aberto: lugar.aberto }">
         <span class="bolinha"></span>
@@ -39,6 +40,8 @@ const distanciaFormatada = computed(
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   overflow: hidden;
+  font-family: 'DM Sans', sans-serif;
+  color: white;
 }
 
 .capa {

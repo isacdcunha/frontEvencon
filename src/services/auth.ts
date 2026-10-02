@@ -25,8 +25,9 @@ async function gerarHash(senha: string) {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
-function abrirSessao({ id, nome, email }: UsuarioSalvo): Usuario {
-  const usuario = { id, nome, email }
+function abrirSessao({ id, nome, email, interesses }: UsuarioSalvo): Usuario {
+  // contas criadas antes dos interesses existirem não têm o campo
+  const usuario = { id, nome, email, interesses: interesses ?? [] }
   localStorage.setItem(CHAVE_SESSAO, JSON.stringify(usuario))
   return usuario
 }
@@ -43,6 +44,7 @@ export async function cadastrar(dados: DadosCadastro): Promise<Usuario> {
     id: Math.max(0, ...usuarios.map((usuario) => usuario.id)) + 1,
     nome: dados.nome.trim(),
     email,
+    interesses: [],
     senhaHash: await gerarHash(dados.senha),
   }
 
@@ -58,6 +60,16 @@ export async function entrar(email: string, senha: string): Promise<Usuario> {
     throw new Error('E-mail ou senha incorretos.')
   }
 
+  return abrirSessao(usuario)
+}
+
+export async function atualizarInteresses(id: number, interesses: string[]): Promise<Usuario> {
+  const usuarios = lerUsuarios()
+  const usuario = usuarios.find((item) => item.id === id)
+  if (!usuario) throw new Error('Conta não encontrada.')
+
+  usuario.interesses = interesses
+  localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios))
   return abrirSessao(usuario)
 }
 
