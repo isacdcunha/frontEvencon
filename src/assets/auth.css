@@ -1,0 +1,248 @@
+/* Estilos compartilhados pelas telas de cadastro e login. */
+* {
+  box-sizing: border-box;
+}
+
+.auth {
+  position: relative;
+  /* 80px = altura do AppHeader, para a tela caber sem rolagem */
+  min-height: calc(100dvh - 80px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 20px 24px;
+  background: #190b17;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.botao-voltar {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #4b3047;
+  background: #2c1929;
+  color: #ffffff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.botao-voltar:hover {
+  border-color: #d946a7;
+}
+
+.conteudo {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.cabecalho {
+  margin-bottom: 20px;
+}
+
+.passo {
+  color: #ef68ae;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+}
+
+h1 {
+  margin: 4px 0 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.cabecalho p {
+  margin: 6px 0 0;
+  color: #aa9baa;
+  font-size: 15px;
+}
+
+.campo {
+  margin-bottom: 14px;
+}
+
+.campo label {
+  display: block;
+  margin-bottom: 6px;
+  color: #d9ccd8;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.campo small,
+.dica {
+  display: block;
+  margin-top: 6px;
+  color: #a993a8;
+  font-size: 12px;
+}
+
+.dica {
+  margin-top: -6px;
+}
+
+.campo small.erro,
+.dica.erro,
+.erro-geral {
+  color: #ff7a90;
+}
+
+.erro-geral {
+  margin: 0 0 12px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.linha {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.input-container {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #593b55;
+  border-radius: 14px;
+  background: #2b1727;
+  padding: 0 14px;
+  transition: 0.2s;
+}
+
+.input-container:focus-within {
+  border-color: #d946a7;
+}
+
+.input-container.invalido {
+  border-color: #ff7a90;
+}
+
+.input-container input {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: white;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.input-container input::placeholder {
+  color: #8c778a;
+}
+
+/* Mantém o fundo escuro quando o navegador preenche o campo sozinho */
+.input-container input:-webkit-autofill,
+.input-container input:-webkit-autofill:hover,
+.input-container input:-webkit-autofill:focus {
+  -webkit-text-fill-color: white;
+  -webkit-box-shadow: 0 0 0 1000px #2b1727 inset;
+  caret-color: white;
+}
+
+.icone {
+  width: 26px;
+  flex-shrink: 0;
+  color: #a993a8;
+  font-size: 14px;
+}
+
+.mensagem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+}
+
+.mensagem h2 {
+  margin: 0;
+  color: #e85aa9;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.estrela {
+  color: #b94be2;
+  font-size: 14px;
+}
+
+.termos {
+  color: #9f8b9d;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  margin: 4px 0 14px;
+}
+
+.botao-enviar {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: 40px;
+  background: linear-gradient(100deg, #df218d, #b83de0);
+  color: white;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(220, 35, 150, 0.25);
+  transition: 0.2s;
+}
+
+.botao-enviar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(220, 35, 150, 0.4);
+}
+
+.botao-enviar:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.rodape {
+  text-align: center;
+  margin-top: 16px;
+  color: #a993a8;
+  font-size: 14px;
+}
+
+.rodape a {
+  color: #ed55a9;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.rodape a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .auth {
+    justify-content: flex-start;
+  }
+
+  .botao-voltar {
+    position: static;
+    margin-bottom: 16px;
+  }
+
+  .linha {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
