@@ -139,7 +139,7 @@ function voltar() {
         </div>
 
         <p class="termos">
-          Ao criar sua conta, você concorda com nossos Termos de Uso e Políticas de Privacidade :)
+          Ao criar sua conta, você concorda com nossos Termos de Uso e Políticas de Privacidade 
         </p>
 
         <p v-if="erros.geral" class="erro-geral" role="alert">{{ erros.geral }}</p>
