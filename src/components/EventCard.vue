@@ -1,15 +1,31 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useEventosStore } from '@/stores/eventos'
 import { useSalvosStore } from '@/stores/salvos'
 import type { Evento } from '@/types/evento'
 
 const props = defineProps<{
   evento: Evento
+  /** Só mostra como o card vai ficar: sem link, coração nem lixeira */
+  previa?: boolean
 }>()
 
+const auth = useAuthStore()
+const eventos = useEventosStore()
 const salvos = useSalvosStore()
 const salvo = computed(() => salvos.tem(props.evento.id))
+const apagado = computed(() => eventos.apagados.includes(props.evento.id))
+
+async function apagar() {
+  if (!window.confirm(`Apagar "${props.evento.titulo}"? Não dá para desfazer.`)) return
+  try {
+    await eventos.apagar(props.evento.id)
+  } catch (erro) {
+    window.alert(erro instanceof Error ? erro.message : 'Não foi possível apagar o evento.')
+  }
+}
 
 const gratis = computed(() => props.evento.preco === 0)
 
@@ -27,23 +43,43 @@ const distanciaFormatada = computed(() => `${props.evento.distanciaKm.toLocaleSt
 </script>
 
 <template>
-  <RouterLink :to="{ name: 'evento', params: { id: evento.id } }" class="card">
-    <div class="capa">
-      <span class="circulo circulo-grande"></span>
-      <span class="circulo circulo-pequeno"></span>
+  <component
+    :is="previa ? 'div' : RouterLink"
+    v-if="!apagado"
+    :to="previa ? undefined : { name: 'evento', params: { id: evento.id } }"
+    class="card"
+  >
+    <div
+      class="capa"
+      :style="evento.imagem ? { backgroundImage: `url(${evento.imagem})` } : undefined"
+    >
+      <template v-if="!evento.imagem">
+        <span class="circulo circulo-grande"></span>
+        <span class="circulo circulo-pequeno"></span>
+      </template>
 
       <span v-if="gratis" class="selo">Grátis</span>
 
-      <button
-        class="botao-salvar"
-        :class="{ ativo: salvo }"
-        :aria-label="salvo ? 'Remover dos salvos' : 'Salvar evento'"
-        @click.prevent.stop="salvos.alternar(evento.id)"
-      >
-        <i :class="salvo ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
-      </button>
+      <div v-if="!previa" class="acoes">
+        <button
+          v-if="auth.admin"
+          class="botao-capa apagar"
+          aria-label="Apagar evento"
+          @click.prevent.stop="apagar"
+        >
+          <i class="fa-solid fa-trash"></i>
+        </button>
+        <button
+          class="botao-capa"
+          :class="{ ativo: salvo }"
+          :aria-label="salvo ? 'Remover dos salvos' : 'Salvar evento'"
+          @click.prevent.stop="salvos.alternar(evento.id)"
+        >
+          <i :class="salvo ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
+        </button>
+      </div>
 
-      <i class="icone-categoria" :class="evento.icone"></i>
+      <i v-if="!evento.imagem" class="icone-categoria" :class="evento.icone"></i>
     </div>
 
     <div class="conteudo">
@@ -67,7 +103,7 @@ const distanciaFormatada = computed(() => `${props.evento.distanciaKm.toLocaleSt
         <span class="distancia">{{ distanciaFormatada }}</span>
       </div>
     </div>
-  </RouterLink>
+  </component>
 </template>
 
 <style scoped>
@@ -92,6 +128,8 @@ const distanciaFormatada = computed(() => `${props.evento.distanciaKm.toLocaleSt
   position: relative;
   height: 125px;
   background: linear-gradient(135deg, #f472b6, #db2777 50%, #c026d3);
+  background-size: cover;
+  background-position: center 70%;
   overflow: hidden;
 }
 
@@ -129,10 +167,15 @@ const distanciaFormatada = computed(() => `${props.evento.distanciaKm.toLocaleSt
   text-transform: uppercase;
 }
 
-.botao-salvar {
+.acoes {
   position: absolute;
   top: 12px;
   right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.botao-capa {
   width: 32px;
   height: 32px;
   border: none;
@@ -143,12 +186,16 @@ const distanciaFormatada = computed(() => `${props.evento.distanciaKm.toLocaleSt
   transition: transform 0.15s;
 }
 
-.botao-salvar:hover {
+.botao-capa:hover {
   transform: scale(1.1);
 }
 
-.botao-salvar.ativo {
+.botao-capa.ativo {
   color: #f472b6;
+}
+
+.botao-capa.apagar {
+  color: #ff7a90;
 }
 
 .icone-categoria {

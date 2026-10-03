@@ -5,12 +5,14 @@ import EventCard from '@/components/EventCard.vue'
 import { categorias } from '@/data/categorias'
 import { listarEventos } from '@/services/eventos'
 import { useAuthStore } from '@/stores/auth'
+import { useEventosStore } from '@/stores/eventos'
 import { useSalvosStore } from '@/stores/salvos'
 import type { Evento } from '@/types/evento'
 
 const router = useRouter()
 const auth = useAuthStore()
 const salvos = useSalvosStore()
+const eventosStore = useEventosStore()
 
 const eventos = ref<Evento[]>([])
 const editandoInteresses = ref(false)
@@ -30,6 +32,10 @@ const categoriasVisiveis = computed(() =>
   editandoInteresses.value
     ? categorias
     : categorias.filter((categoria) => interesses.value.includes(categoria.nome)),
+)
+
+const eventosNoAr = computed(
+  () => eventos.value.filter((evento) => !eventosStore.apagados.includes(evento.id)).length,
 )
 
 const eventosSalvos = computed(() => eventos.value.filter((evento) => salvos.tem(evento.id)))
@@ -63,12 +69,35 @@ function sair() {
         <span class="avatar">{{ auth.usuario.nome[0]?.toUpperCase() }}</span>
         <div class="identificacao">
           <h1>{{ auth.usuario.nome }}</h1>
+          <span v-if="auth.admin" class="selo-admin">
+            <i class="fa-solid fa-shield-halved"></i> Administradora
+          </span>
           <p>{{ auth.usuario.email }}</p>
         </div>
+        <RouterLink
+          :to="{ name: 'configuracoes' }"
+          class="botao-configuracoes"
+          aria-label="Configurações"
+        >
+          <i class="fa-solid fa-gear"></i>
+        </RouterLink>
         <button type="button" class="botao-sair" @click="sair">
           <i class="fa-solid fa-arrow-right-from-bracket"></i> Sair
         </button>
       </header>
+
+      <section v-if="auth.admin" class="painel-admin">
+        <div>
+          <p class="sobretitulo">Painel da administradora</p>
+          <h2>Eventos dos parceiros</h2>
+          <p class="dica">
+            {{ eventosNoAr }} no ar. Para apagar um evento, use a lixeira dele em qualquer lista.
+          </p>
+        </div>
+        <RouterLink :to="{ name: 'novo-evento' }" class="botao-principal">
+          <i class="fa-solid fa-plus"></i> Adicionar evento
+        </RouterLink>
+      </section>
 
       <section>
         <div class="cabecalho-secao">
@@ -198,16 +227,64 @@ h3 {
   margin-top: 8px;
   padding: 14px 24px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #db2777, #a855f7);
+  background-color: #db2777;
   color: white;
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
-  transition: filter 0.2s;
+  transition: background-color 0.2s;
 }
 
 .botao-principal:hover {
-  filter: brightness(1.1);
+  background-color: #be185d;
+}
+
+/* Administração */
+.selo-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background-color: #7c3aed;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.painel-admin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 16px;
+  background-color: rgba(124, 58, 237, 0.12);
+}
+
+.painel-admin h2 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.painel-admin .dica {
+  margin: 6px 0 0;
+}
+
+.painel-admin .botao-principal {
+  margin-top: 0;
+}
+
+.sobretitulo {
+  color: #c4b5fd;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 /* Topo */
@@ -245,6 +322,25 @@ h3 {
   color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.botao-configuracoes {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background-color: #2a1724;
+  color: white;
+  text-decoration: none;
+  transition: border-color 0.2s;
+}
+
+.botao-configuracoes:hover {
+  border-color: #f472b6;
 }
 
 .botao-sair {

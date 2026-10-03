@@ -73,7 +73,11 @@ const proximos = computed(() =>
     .sort((a, b) => a.inicio.localeCompare(b.inicio)),
 )
 
-const destaque = computed(() => proximos.value.find((evento) => evento.destaque))
+// O card principal é o próximo evento em destaque; entre eles, quem tem foto vem primeiro.
+const destaque = computed(() => {
+  const emDestaque = proximos.value.filter((evento) => evento.destaque)
+  return emDestaque.find((evento) => evento.imagem) ?? emDestaque[0]
+})
 
 const paraVoce = computed(() =>
   proximos.value.filter((evento) => evento.id !== destaque.value?.id).slice(0, 4),
@@ -116,10 +120,13 @@ const rotuloFimDeSemana = computed(() => {
         v-if="destaque"
         :to="{ name: 'evento', params: { id: destaque.id } }"
         class="destaque"
+        :style="destaque.imagem ? { backgroundImage: `url(${destaque.imagem})` } : undefined"
       >
-        <span class="circulo circulo-grande"></span>
-        <span class="circulo circulo-pequeno"></span>
-        <i class="icone-destaque" :class="destaque.icone"></i>
+        <template v-if="!destaque.imagem">
+          <span class="circulo circulo-grande"></span>
+          <span class="circulo circulo-pequeno"></span>
+          <i class="icone-destaque" :class="destaque.icone"></i>
+        </template>
 
         <div class="destaque-texto">
           <span class="selo-destaque">
@@ -195,20 +202,6 @@ const rotuloFimDeSemana = computed(() => {
         </section>
       </div>
 
-      <RouterLink to="/cadastro" class="momento">
-        <span class="circulo circulo-momento-1"></span>
-        <span class="circulo circulo-momento-2"></span>
-        <img src="/imgs/evencon-icone.png" alt="" />
-        <div>
-          <p class="sobretitulo claro">Seu momento</p>
-          <h3>Não sabe o que fazer hoje?</h3>
-          <p>4 perguntas rápidas e a gente sugere.</p>
-        </div>
-        <span class="botao-momento">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> Fazer o quiz
-        </span>
-      </RouterLink>
-
       <section>
         <div class="cabecalho-secao">
           <div>
@@ -283,6 +276,8 @@ h3 {
   border-radius: 28px;
   overflow: hidden;
   background: linear-gradient(135deg, #f472b6, #db2777 50%, #c026d3);
+  background-size: cover;
+  background-position: center 75%;
   color: white;
   text-decoration: none;
 }
@@ -362,15 +357,14 @@ h3 {
   margin-top: 6px;
   padding: 14px 22px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #db2777, #a855f7);
+  background-color: #db2777;
   font-size: 15px;
   font-weight: 700;
-  box-shadow: 0 12px 32px -10px rgba(236, 72, 153, 0.7);
-  transition: filter 0.2s;
+  transition: background-color 0.2s;
 }
 
 .destaque:hover .botao-destaque {
-  filter: brightness(1.1);
+  background-color: #be185d;
 }
 
 /* Atalhos */
@@ -469,69 +463,6 @@ h3 {
   text-align: center;
 }
 
-/* Seu momento */
-.momento {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 28px;
-  border-radius: 20px;
-  overflow: hidden;
-  background: linear-gradient(135deg, #7b6cf6, #ec4899);
-  color: white;
-  text-decoration: none;
-}
-
-.momento > * {
-  position: relative;
-}
-
-.momento > .circulo {
-  position: absolute;
-}
-
-.circulo-momento-1 {
-  width: 140px;
-  height: 140px;
-  top: -30px;
-  right: -30px;
-}
-
-.circulo-momento-2 {
-  width: 60px;
-  height: 60px;
-  right: 50px;
-  bottom: -26px;
-}
-
-.momento img {
-  width: 72px;
-}
-
-.momento div {
-  flex: 1;
-}
-
-.momento h3 {
-  margin: 6px 0 4px;
-  font-size: 22px;
-}
-
-.momento div p:last-child {
-  font-size: 14px;
-}
-
-.botao-momento {
-  padding: 10px 16px;
-  border-radius: 999px;
-  background-color: white;
-  color: #1f1019;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 @media (max-width: 960px) {
   .grade-4 {
     grid-template-columns: repeat(2, 1fr);
@@ -558,15 +489,6 @@ h3 {
   .grade-4,
   .grade-2 {
     grid-template-columns: 1fr;
-  }
-
-  .momento {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .momento img {
-    display: none;
   }
 }
 </style>

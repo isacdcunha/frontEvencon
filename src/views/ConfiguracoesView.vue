@@ -1,6 +1,7 @@
 <script setup lang="ts">
    import {ref, computed} from 'vue'
    import { useRouter } from 'vue-router'
+   import { useAuthStore } from '@/stores/auth'
 
    import {
       Heart,
@@ -15,14 +16,15 @@
     } from 'lucide-vue-next'
 
    const router = useRouter()
+   const auth = useAuthStore()
 
    function voltar(){
     router.back()
    }
 
    function sair(){
-    //logica do logout
-    console.log('Usuário saiu da conta')
+    auth.sair()
+    router.push({ name: 'home' })
    }
 
    const lembrete = ref(true)
@@ -122,7 +124,7 @@
         <ChevronRight class="seta" :size="18" />
       </div>
 
-      <div class="linha clicavel">
+      <div class="linha clicavel" @click="router.push({ name: 'localizacao' })">
         <span class="icone">🛡️</span>
         <div class="texto">
           <strong>Privacidade e localização</strong>

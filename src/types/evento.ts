@@ -10,7 +10,9 @@ export interface Evento {
   rotuloPreco: string
   distanciaKm: number
   icone: string
-  destaque?: string
+  destaque?: string | null
+  /** Foto de capa; sem ela o evento usa o degradê padrão */
+  imagem?: string | null
   bairro: string
   acessivel: boolean
   petFriendly: boolean
@@ -63,3 +65,6 @@ export interface EventoDetalhe extends Evento {
   tempoDeCarro: string
   lugaresProximos: LugarProximo[]
 }
+
+/** O que a administradora envia para criar um evento */
+export type NovoEvento = Omit<EventoDetalhe, 'id' | 'data' | 'dataCompleta' | 'lugaresProximos'>

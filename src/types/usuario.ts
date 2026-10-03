@@ -3,6 +3,7 @@ export interface Usuario {
   nome: string
   email: string
   interesses: string[]
+  admin: boolean
 }
 
 export interface DadosCadastro {

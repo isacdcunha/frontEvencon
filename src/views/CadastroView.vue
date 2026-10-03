@@ -36,7 +36,7 @@ async function criarConta() {
   enviando.value = true
   try {
     await auth.cadastrar({ nome: form.nome, email: form.email, senha: form.senha })
-    router.push({ name: 'home' })
+    router.push({ name: 'localizacao', state: { doCadastro: true } })
   } catch (erro) {
     erros.geral = erro instanceof Error ? erro.message : 'Não foi possível criar a conta.'
   } finally {
@@ -139,7 +139,7 @@ function voltar() {
         </div>
 
         <p class="termos">
-          Ao criar sua conta, você concorda com nossos Termos de Uso e Políticas de Privacidade 
+          Ao criar sua conta, você concorda com nossos Termos de Uso e Políticas de Privacidade
         </p>
 
         <p v-if="erros.geral" class="erro-geral" role="alert">{{ erros.geral }}</p>

@@ -1,30 +1,32 @@
-import type { Evento, EventoDetalhe, Lugar } from '@/types/evento'
+import { chamarApi, ErroApi } from '@/services/api'
+import type { Evento, EventoDetalhe, Lugar, NovoEvento } from '@/types/evento'
 
-// Endereço do back-end (repositório backEvencon). Para trocar, crie um .env.local.
-const URL_API = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
-
-async function chamarApi(caminho: string) {
-  const resposta = await fetch(`${URL_API}${caminho}`)
-  if (!resposta.ok && resposta.status !== 404) {
-    throw new Error(`A API respondeu ${resposta.status} em ${caminho}`)
-  }
-  return resposta
+export function listarEventos() {
+  return chamarApi<Evento[]>('/eventos')
 }
 
-export async function listarEventos(): Promise<Evento[]> {
-  return (await chamarApi('/eventos')).json()
-}
-
-export async function listarLugares(): Promise<Lugar[]> {
-  return (await chamarApi('/lugares')).json()
+export function listarLugares() {
+  return chamarApi<Lugar[]>('/lugares')
 }
 
 export async function buscarEvento(id: number): Promise<EventoDetalhe | undefined> {
-  const resposta = await chamarApi(`/eventos/${id}`)
-  return resposta.ok ? resposta.json() : undefined
+  try {
+    return await chamarApi<EventoDetalhe>(`/eventos/${id}`)
+  } catch (erro) {
+    if (erro instanceof ErroApi && erro.status === 404) return undefined
+    throw erro
+  }
 }
 
-export async function buscarSemelhantes(evento: EventoDetalhe, limite = 3): Promise<Evento[]> {
-  const resposta = await chamarApi(`/eventos/${evento.id}/semelhantes?limite=${limite}`)
-  return resposta.ok ? resposta.json() : []
+export function buscarSemelhantes(evento: EventoDetalhe, limite = 3) {
+  return chamarApi<Evento[]>(`/eventos/${evento.id}/semelhantes?limite=${limite}`)
+}
+
+// As duas funções abaixo só funcionam para quem está logada como administradora.
+export function criarEvento(evento: NovoEvento) {
+  return chamarApi<EventoDetalhe>('/eventos', { metodo: 'POST', corpo: evento })
+}
+
+export function apagarEvento(id: number) {
+  return chamarApi<void>(`/eventos/${id}`, { metodo: 'DELETE' })
 }
