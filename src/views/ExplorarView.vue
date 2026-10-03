@@ -26,6 +26,8 @@ const lugares = ref<Lugar[]>([])
 const erro = ref(false)
 
 onMounted(async () => {
+  if (window.history.state?.focarBusca) document.getElementById('campo-busca')?.focus()
+
   try {
     ;[eventos.value, lugares.value] = await Promise.all([listarEventos(), listarLugares()])
   } catch {
@@ -240,7 +242,6 @@ function passaEvento(evento: Evento, f: Filtros, t: string) {
   return passaBairroEExtras(evento, f) && passaDataHora(evento, f)
 }
 
-// Lugares não têm preço em reais, distância nem data: esses filtros só valem para eventos.
 function passaLugar(lugar: Lugar, f: Filtros, t: string) {
   if (!contemTermo([lugar.nome, lugar.tipo, lugar.categoria, lugar.bairro], t)) return false
   if (f.categorias.length && !f.categorias.includes(lugar.categoria)) return false
@@ -425,8 +426,6 @@ function voltarInicio() {
   Object.assign(filtros, filtrosVazios())
 }
 
-// A busca do header e os atalhos da tela inicial chegam pela URL:
-// /explorar?q=samba, ?data=hoje, ?preco=gratis, ?categoria=Música, ?tipo=lugares, ?ordem=proximos
 const route = useRoute()
 
 function aplicarQuery() {
@@ -728,7 +727,6 @@ watch(() => route.query, aplicarQuery, { immediate: true })
 
 
 
-/*global */
 :global(body) {
   background-color: #2e0a1e;
   font-family: 'DM Sans', sans-serif;
@@ -748,7 +746,7 @@ watch(() => route.query, aplicarQuery, { immediate: true })
   transition: border-color 0.2s;
    width: 95%;
   height: 50px;
-  margin: 0 auto;
+  margin: 32px auto 0;
 }
 .busca i{
   margin-left: 30px;
@@ -779,7 +777,6 @@ watch(() => route.query, aplicarQuery, { immediate: true })
 }
 
 
-/*Filtragem css*/
 .filtro-wrapper {
   position: relative;
 }
@@ -1129,7 +1126,7 @@ watch(() => route.query, aplicarQuery, { immediate: true })
   grid-template-columns: 30% 1fr;
   width: 95%;
   gap: 30px;
-  margin: 20px auto 0;
+  margin: 28px auto 0;
 }
 
 .chip.ativo {

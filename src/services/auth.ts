@@ -1,86 +1,70 @@
+import { chamarApi, ErroApi, guardarToken, lerToken } from '@/services/api'
 import type { DadosCadastro, Usuario } from '@/types/usuario'
 
-// Ainda não existe backend: as contas ficam no localStorage deste navegador.
-const CHAVE_USUARIOS = 'evencon:usuarios'
-const CHAVE_SESSAO = 'evencon:sessao'
+// As contas ficam no back-end. O navegador guarda só o token do login e uma cópia
+// dos dados da conta, para a tela não piscar como "sem conta" ao recarregar.
+const CHAVE_USUARIO = 'evencon:sessao'
 
-interface UsuarioSalvo extends Usuario {
-  senhaHash: string
+interface SessaoAberta {
+  token: string
+  usuario: Usuario
 }
 
-function lerUsuarios(): UsuarioSalvo[] {
-  try {
-    return JSON.parse(localStorage.getItem(CHAVE_USUARIOS) ?? '[]')
-  } catch {
-    return []
-  }
-}
-
-function normalizarEmail(email: string) {
-  return email.trim().toLowerCase()
-}
-
-async function gerarHash(senha: string) {
-  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(senha))
-  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('')
-}
-
-function abrirSessao({ id, nome, email, interesses }: UsuarioSalvo): Usuario {
-  // contas criadas antes dos interesses existirem não têm o campo
-  const usuario = { id, nome, email, interesses: interesses ?? [] }
-  localStorage.setItem(CHAVE_SESSAO, JSON.stringify(usuario))
+function guardarUsuario(usuario: Usuario | null) {
+  if (usuario) localStorage.setItem(CHAVE_USUARIO, JSON.stringify(usuario))
+  else localStorage.removeItem(CHAVE_USUARIO)
   return usuario
 }
 
+function abrirSessao({ token, usuario }: SessaoAberta) {
+  guardarToken(token)
+  return guardarUsuario(usuario)!
+}
+
+function encerrarSessao() {
+  guardarToken(null)
+  guardarUsuario(null)
+}
+
 export async function cadastrar(dados: DadosCadastro): Promise<Usuario> {
-  const usuarios = lerUsuarios()
-  const email = normalizarEmail(dados.email)
-
-  if (usuarios.some((usuario) => usuario.email === email)) {
-    throw new Error('Já existe uma conta com esse e-mail.')
-  }
-
-  const novo: UsuarioSalvo = {
-    id: Math.max(0, ...usuarios.map((usuario) => usuario.id)) + 1,
-    nome: dados.nome.trim(),
-    email,
-    interesses: [],
-    senhaHash: await gerarHash(dados.senha),
-  }
-
-  localStorage.setItem(CHAVE_USUARIOS, JSON.stringify([...usuarios, novo]))
-  return abrirSessao(novo)
+  return abrirSessao(await chamarApi('/auth/cadastro', { metodo: 'POST', corpo: dados }))
 }
 
 export async function entrar(email: string, senha: string): Promise<Usuario> {
-  const senhaHash = await gerarHash(senha)
-  const usuario = lerUsuarios().find((item) => item.email === normalizarEmail(email))
-
-  if (!usuario || usuario.senhaHash !== senhaHash) {
-    throw new Error('E-mail ou senha incorretos.')
-  }
-
-  return abrirSessao(usuario)
+  return abrirSessao(await chamarApi('/auth/login', { metodo: 'POST', corpo: { email, senha } }))
 }
 
-export async function atualizarInteresses(id: number, interesses: string[]): Promise<Usuario> {
-  const usuarios = lerUsuarios()
-  const usuario = usuarios.find((item) => item.id === id)
-  if (!usuario) throw new Error('Conta não encontrada.')
-
-  usuario.interesses = interesses
-  localStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios))
-  return abrirSessao(usuario)
-}
-
-export function sair() {
-  localStorage.removeItem(CHAVE_SESSAO)
-}
-
-export function buscarSessao(): Usuario | null {
+export function usuarioEmCache(): Usuario | null {
+  if (!lerToken()) return null
   try {
-    return JSON.parse(localStorage.getItem(CHAVE_SESSAO) ?? 'null')
+    return JSON.parse(localStorage.getItem(CHAVE_USUARIO) ?? 'null')
   } catch {
     return null
   }
+}
+
+/** Confere com o servidor se o login guardado ainda vale. */
+export async function buscarSessao(): Promise<Usuario | null> {
+  if (!lerToken()) return null
+  try {
+    return guardarUsuario(await chamarApi<Usuario>('/auth/eu'))
+  } catch (erro) {
+    if (erro instanceof ErroApi && erro.status === 401) {
+      encerrarSessao()
+      return null
+    }
+    throw erro
+  }
+}
+
+export async function atualizarInteresses(interesses: string[]): Promise<Usuario> {
+  return guardarUsuario(
+    await chamarApi<Usuario>('/auth/eu/interesses', { metodo: 'PUT', corpo: { interesses } }),
+  )!
+}
+
+export function sair() {
+  // avisa o servidor (se ele estiver fora do ar, o login local sai do mesmo jeito)
+  chamarApi('/auth/sair', { metodo: 'POST' }).catch(() => {})
+  encerrarSessao()
 }

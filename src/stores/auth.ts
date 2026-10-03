@@ -4,8 +4,9 @@ import * as authService from '@/services/auth'
 import type { DadosCadastro, Usuario } from '@/types/usuario'
 
 export const useAuthStore = defineStore('auth', () => {
-  const usuario = ref<Usuario | null>(authService.buscarSessao())
+  const usuario = ref<Usuario | null>(authService.usuarioEmCache())
   const logado = computed(() => usuario.value !== null)
+  const admin = computed(() => usuario.value?.admin === true)
 
   async function cadastrar(dados: DadosCadastro) {
     usuario.value = await authService.cadastrar(dados)
@@ -17,7 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function atualizarInteresses(interesses: string[]) {
     if (!usuario.value) return
-    usuario.value = await authService.atualizarInteresses(usuario.value.id, interesses)
+    usuario.value = await authService.atualizarInteresses(interesses)
   }
 
   function sair() {
@@ -25,5 +26,13 @@ export const useAuthStore = defineStore('auth', () => {
     usuario.value = null
   }
 
-  return { usuario, logado, cadastrar, entrar, atualizarInteresses, sair }
+  // Ao abrir o site, confere se o login guardado ainda vale e atualiza os dados da conta.
+  authService
+    .buscarSessao()
+    .then((atual) => (usuario.value = atual))
+    .catch(() => {
+      // servidor fora do ar: segue com o que estava guardado
+    })
+
+  return { usuario, logado, admin, cadastrar, entrar, atualizarInteresses, sair }
 })

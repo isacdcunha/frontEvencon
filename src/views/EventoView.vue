@@ -5,6 +5,8 @@ import EventCard from '@/components/EventCard.vue'
 import LugarCard from '@/components/LugarCard.vue'
 import MapaEvento, { type ResumoRota } from '@/components/MapaEvento.vue'
 import { buscarEvento, buscarSemelhantes } from '@/services/eventos'
+import { useAuthStore } from '@/stores/auth'
+import { useEventosStore } from '@/stores/eventos'
 import { useSalvosStore } from '@/stores/salvos'
 import type { Evento, EventoDetalhe } from '@/types/evento'
 
@@ -15,6 +17,8 @@ const evento = ref<EventoDetalhe>()
 const semelhantes = ref<Evento[]>([])
 const carregando = ref(true)
 const erro = ref(false)
+const auth = useAuthStore()
+const eventos = useEventosStore()
 const salvos = useSalvosStore()
 const salvo = computed(() => (evento.value ? salvos.tem(evento.value.id) : false))
 const rota = ref<ResumoRota>()
@@ -65,6 +69,17 @@ const linkComoChegar = computed(() =>
     : '',
 )
 
+async function apagar() {
+  if (!evento.value) return
+  if (!window.confirm(`Apagar "${evento.value.titulo}"? Não dá para desfazer.`)) return
+  try {
+    await eventos.apagar(evento.value.id)
+    router.push({ name: 'home' })
+  } catch (falha) {
+    window.alert(falha instanceof Error ? falha.message : 'Não foi possível apagar o evento.')
+  }
+}
+
 function voltar() {
   if (window.history.length > 1) {
     router.back()
@@ -99,16 +114,29 @@ async function compartilhar() {
 
     <div v-else class="layout">
       <section class="principal">
-        <div class="capa">
-          <span class="circulo circulo-grande"></span>
-          <span class="circulo circulo-pequeno"></span>
-          <i class="icone-capa" :class="evento.icone"></i>
+        <div
+          class="capa"
+          :style="evento.imagem ? { backgroundImage: `url(${evento.imagem})` } : undefined"
+        >
+          <template v-if="!evento.imagem">
+            <span class="circulo circulo-grande"></span>
+            <span class="circulo circulo-pequeno"></span>
+            <i class="icone-capa" :class="evento.icone"></i>
+          </template>
 
           <button class="botao-redondo voltar" aria-label="Voltar" @click="voltar">
             <i class="fa-solid fa-chevron-left"></i>
           </button>
 
           <div class="acoes-capa">
+            <button
+              v-if="auth.admin"
+              class="botao-redondo apagar"
+              aria-label="Apagar evento"
+              @click="apagar"
+            >
+              <i class="fa-solid fa-trash"></i>
+            </button>
             <button class="botao-redondo" aria-label="Compartilhar" @click="compartilhar">
               <i class="fa-solid fa-arrow-up-from-bracket"></i>
             </button>
@@ -228,13 +256,14 @@ async function compartilhar() {
         <div class="caixa ingresso">
           <p class="lote">{{ evento.lote }}</p>
           <p class="preco">{{ precoFormatado }}</p>
-          <a class="botao-comprar" :href="evento.linkCompra" target="_blank" rel="noopener">
+          <!-- Por enquanto só visual: a compra pelo site do organizador será implementada depois -->
+          <button type="button" class="botao-comprar">
             Comprar no site oficial
             <i class="fa-solid fa-arrow-up-right-from-square"></i>
-          </a>
+          </button>
           <p class="aviso">
             <i class="fa-solid fa-circle-info"></i>
-            Você será levada ao site do organizador
+            Compra pelo site do organizador em breve
           </p>
           <div class="ingresso-interesse">
             <div class="avatares">
@@ -317,6 +346,8 @@ p {
   border-radius: 24px;
   overflow: hidden;
   background: linear-gradient(160deg, #8b5cf6, #c084fc 45%, #ec4899);
+  background-size: cover;
+  background-position: center;
 }
 
 .capa::after {
@@ -372,6 +403,10 @@ p {
 
 .botao-redondo.ativo {
   color: #f472b6;
+}
+
+.botao-redondo.apagar {
+  color: #ff7a90;
 }
 
 .voltar {
@@ -602,18 +637,15 @@ p {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  width: 100%;
   height: 48px;
+  border: none;
   border-radius: 999px;
-  background: linear-gradient(90deg, #db2777, #a855f7);
-  box-shadow: 0 8px 24px rgba(219, 39, 119, 0.35);
+  background-color: #db2777;
   color: white;
+  font-family: inherit;
+  font-size: 16px;
   font-weight: 700;
-  text-decoration: none;
-  transition: filter 0.2s;
-}
-
-.botao-comprar:hover {
-  filter: brightness(1.1);
 }
 
 .aviso {

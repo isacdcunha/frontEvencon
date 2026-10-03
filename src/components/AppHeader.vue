@@ -1,31 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 
-const termo = ref(typeof route.query.q === 'string' ? route.query.q : '')
-
-watch(
-  () => route.query.q,
-  (q) => {
-    termo.value = typeof q === 'string' ? q : ''
-  },
-)
-
-function montarQuery() {
-  return termo.value.trim() ? { q: termo.value } : {}
-}
-
+// A busca de verdade fica no Explorar: aqui a barra só leva até lá, já com o campo em foco.
 function irParaExplorar() {
-  if (route.name !== 'explorar') {
-    router.push({ name: 'explorar', query: montarQuery() })
-  }
-}
-
-function atualizarBusca() {
-  router.replace({ name: 'explorar', query: montarQuery() })
+  router.push({ name: 'explorar', state: { focarBusca: true } })
 }
 </script>
 
@@ -35,21 +16,13 @@ function atualizarBusca() {
       <img src="/imgs/evencon-horizontal-branco.png" alt="Evencon" />
       <RouterLink to="/"><i class="fa-regular fa-house"></i> Início</RouterLink>
       <RouterLink to="/explorar"><i class="fa-solid fa-magnifying-glass"></i> Explorar</RouterLink>
-      <RouterLink to="/cadastro"><i class="fa-solid fa-wand-magic-sparkles"></i> Seu momento</RouterLink>
-      <RouterLink to="/salvos"><i class="fa-regular fa-heart"></i> Salvos</RouterLink>
+      <RouterLink to="/perfil"><i class="fa-regular fa-heart"></i> Salvos</RouterLink>
     </nav>
 
-    <form class="busca" role="search" @submit.prevent="atualizarBusca">
+    <button v-if="route.name !== 'explorar'" type="button" class="busca" @click="irParaExplorar">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input
-        v-model="termo"
-        type="search"
-        placeholder="Buscar evento, lugar ou artista"
-        aria-label="Buscar evento, lugar ou artista"
-        @focus="irParaExplorar"
-        @input="atualizarBusca"
-      />
-    </form>
+      Buscar evento, lugar ou artista
+    </button>
 
     <RouterLink to="/perfil" class="avatar" aria-label="Meu perfil">
       <i class="fa-solid fa-user"></i>
@@ -132,25 +105,17 @@ header {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 999px;
   background-color: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
+  font-family: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: text;
   transition: border-color 0.2s;
 }
 
-.busca:focus-within {
+.busca:hover,
+.busca:focus-visible {
   border-color: #f472b6;
-}
-
-.busca input {
-  flex: 1;
-  background: none;
-  border: none;
   outline: none;
-  color: white;
-  font-family: inherit;
-  font-size: 15px;
-}
-
-.busca input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
 }
 </style>
